@@ -10,15 +10,15 @@ resource "azurerm_mssql_server" "this" {
   minimum_tls_version = var.min_tls_version
 
   tags = var.tags
-}
 
-# Optional AAD admin
-resource "azurerm_mssql_active_directory_administrator" "aad_admin" {
-  count               = var.aad_admin_object_id != null ? 1 : 0
-  server_id           = azurerm_mssql_server.this.id
-  login               = var.aad_admin_login_name
-  object_id           = var.aad_admin_object_id
-  tenant_id           = var.tenant_id
+dynamic "azuread_administrator" {
+  for_each = var.aad_admin_object_id != null && var.aad_admin_login_name != null ? [1] : []
+  content {
+    login_username = var.aad_admin_login_name
+    object_id      = var.aad_admin_object_id
+    tenant_id      = var.tenant_id
+  }
+}
 }
 
 # Optional DB
@@ -37,11 +37,11 @@ resource "azurerm_mssql_database" "this" {
 
 # Optional threat detection
 resource "azurerm_mssql_server_security_alert_policy" "this" {
-  count              = var.threat_detection_email != null ? 1 : 0
-  resource_group_name = var.resource_group_name
-  server_name         = azurerm_mssql_server.this.name
-  state               = "Enabled"
-  email_account_admins = "Enabled"
+  count                = var.threat_detection_email != null ? 1 : 0
+  resource_group_name  = var.resource_group_name
+  server_name          = azurerm_mssql_server.this.name
+  state                = "Enabled"
+  email_account_admins = true   # <-- boolean, not "Enabled"
   email_addresses      = [var.threat_detection_email]
 }
 
